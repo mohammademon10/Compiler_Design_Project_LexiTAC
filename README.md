@@ -186,6 +186,14 @@ r               id3      int
 
 ### Web Simulator
 
+<div align="center">
+  <img src="UI/LexiTac_inteface.jpg" width="100%" alt="LexiTAC Web Simulator Interface" style="border-radius: 12px;"/>
+  <br/>
+  <em>🖥️ Compiler Studio — Interactive Web-Based Compiler Simulator</em>
+</div>
+
+<br/>
+
 The interactive UI provides a four-panel view:
 
 | Panel | Description |
