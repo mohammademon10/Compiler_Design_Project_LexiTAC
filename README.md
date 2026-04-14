@@ -88,7 +88,7 @@ LexiTAC/
 ├── 📄 lexer.l                  # Flex lexer — tokenization + symbol table
 ├── 📄 parser.y                 # Bison parser — grammar rules + TAC emission
 ├── 📄 Makefile                 # Build automation (make / make run / make clean)
-├── 🌐 LexiTAC.html    # Interactive web-based compiler simulator
+├── 🌐 index.html    # Interactive web-based compiler simulator
 │
 ├── 📂 c_code/
 │   ├── 📄 leci.c              # Standalone C implementation (no Flex/Bison)
