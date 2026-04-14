@@ -46,7 +46,7 @@
 
 A **Symbol Table** is maintained throughout, assigning each identifier a unique internal ID (`id1`, `id2`, …) and tracking its type.
 
-> 💡 The project also includes an **interactive web-based simulator** (`compiler_studio.html`) — a beautiful dark-themed UI that visualizes all compiler phases in real time, right in your browser.
+> 💡 The project also includes an **interactive web-based simulator** (`LexiTAC.html`) — a beautiful dark-themed UI that visualizes all compiler phases in real time, right in your browser.
 
 ---
 
@@ -88,7 +88,7 @@ LexiTAC/
 ├── 📄 lexer.l                  # Flex lexer — tokenization + symbol table
 ├── 📄 parser.y                 # Bison parser — grammar rules + TAC emission
 ├── 📄 Makefile                 # Build automation (make / make run / make clean)
-├── 🌐 compiler_studio.html    # Interactive web-based compiler simulator
+├── 🌐 LexiTAC.html    # Interactive web-based compiler simulator
 │
 ├── 📂 c_code/
 │   ├── 📄 leci.c              # Standalone C implementation (no Flex/Bison)
@@ -149,13 +149,13 @@ gcc leci.c -o leci
 
 ### Run Web Simulator
 
-Simply open `compiler_studio.html` in any modern browser — no server required!
+Simply open `LexiTAC.html` in any modern browser — no server required!
 
 ```bash
 # Or from terminal:
-open compiler_studio.html        # macOS
-start compiler_studio.html       # Windows
-xdg-open compiler_studio.html    # Linux
+open LexiTAC.html        # macOS
+start LexiTAC.html       # Windows
+xdg-open LexiTAC.html    # Linux
 ```
 
 ---
