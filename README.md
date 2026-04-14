@@ -14,6 +14,7 @@
   ![Flex](https://img.shields.io/badge/Tool-Flex-f59e0b?style=for-the-badge&logo=gnu&logoColor=white)
   ![Bison](https://img.shields.io/badge/Tool-Bison-22c55e?style=for-the-badge&logo=gnu&logoColor=white)
   ![License](https://img.shields.io/badge/License-MIT-6c63ff?style=for-the-badge)
+  [![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-Click_Here-00d4aa?style=for-the-badge)](https://mohammademon10.github.io/Compiler_Design_Project_LexiTAC/)
   ![Stars](https://img.shields.io/github/stars/mohammademon10/Compiler_Design_Project_LexiTAC?style=for-the-badge&color=00d4aa)
 
   <br/>
