@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Compiler Studio — Symbol Table, Lexer & TAC</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0d0f14;
+    --surface:   #151821;
+    --card:      #1c2030;
+    --border:    rgba(255,255,255,0.07);
+    --border2:   rgba(255,255,255,0.12);
+    --text:      #e8eaf0;
+    --muted:     #7a8090;
+    --accent:    #6c63ff;
+    --accent2:   #00d4aa;
+    --warn:      #f59e0b;
+    --danger:    #ef4444;
+    --success:   #22c55e;
+    --mono:      'JetBrains Mono', monospace;
+    --sans:      'Syne', sans-serif;
+    --radius:    10px;
+    --radius-lg: 16px;
+  }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* === HEADER === */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .logo {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 800; color: #fff;
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+  header p  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .badge {
+    margin-left: auto;
+    background: rgba(108,99,255,0.15);
+    color: var(--accent);
+    border: 1px solid rgba(108,99,255,0.3);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-family: var(--mono);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  /* === LAYOUT === */
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto 1fr;
+    gap: 0;
+    height: calc(100vh - 73px);
+    overflow: hidden;
+  }
+
+  /* === INPUT PANEL === */
+  .input-panel {
+    grid-column: 1; grid-row: 1 / 3;
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    background: var(--surface);
+  }
+  .panel-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .ph-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .panel-header h2 { font-size: 13px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); }
+
+  .editor-wrap {
+    flex: 1;
+    position: relative;
+    padding: 20px;
+  }
+  .editor-label {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  #source-input {
+    width: 100%;
+    height: calc(100% - 60px);
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    font-family: var(--mono);
+    font-size: 15px;
+    line-height: 1.7;
+    resize: none;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  #source-input:focus { border-color: var(--accent); }
+
+  .examples {
+    padding: 0 20px 16px;
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .ex-btn {
+    background: var(--card);
+    border: 1px solid var(--border2);
+    color: var(--muted);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .ex-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .run-btn {
+    margin: 0 20px 20px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    padding: 14px;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .run-btn:hover { background: #7c74ff; transform: translateY(-1px); }
+  .run-btn:active { transform: translateY(0); }
+  .run-btn svg { width: 16px; height: 16px; }
+
+  /* === OUTPUT PANELS === */
+  .output-top {
+    grid-column: 2; grid-row: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 1px solid var(--border);
+    min-height: 180px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .output-bottom {
+    grid-column: 2; grid-row: 2;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .out-panel {
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+  }
+  .out-panel:last-child { border-right: none; }
+
+  .out-body {
+    flex: 1; overflow-y: auto; padding: 14px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.8;
+  }
+  .out-body::-webkit-scrollbar { width: 4px; }
+  .out-body::-webkit-scrollbar-track { background: transparent; }
+  .out-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+  /* Tokens */
+  .tok {
+    display: inline-flex; align-items: center;
+    background: var(--card); border: 1px solid var(--border2);
+    border-radius: 6px; padding: 2px 8px; margin: 3px;
+    font-size: 11px; font-family: var(--mono);
+    transition: all 0.15s;
+  }
+  .tok:hover { border-color: var(--accent); }
+  .tok-type { color: var(--muted); font-size: 9px; margin-right: 4px; text-transform: uppercase; }
+  .tok-val  { color: var(--text); }
+  .tok.t-id     { border-left: 3px solid var(--accent); }
+  .tok.t-num    { border-left: 3px solid var(--accent2); }
+  .tok.t-op     { border-left: 3px solid var(--warn); }
+  .tok.t-assign { border-left: 3px solid #f472b6; }
+  .tok.t-paren  { border-left: 3px solid var(--muted); }
+
+  /* Symbol table */
+  .sym-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .sym-table th {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px;
+    color: var(--muted); font-weight: 700; padding: 6px 8px; text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .sym-table td { padding: 7px 8px; border-bottom: 1px solid var(--border); font-family: var(--mono); }
+  .sym-id   { color: var(--accent); }
+  .sym-type { color: var(--accent2); font-size: 10px; background: rgba(0,212,170,0.1); padding: 2px 6px; border-radius: 4px; }
+  .sym-name { color: var(--text); }
+
+  /* TAC */
+  .tac-line {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+    animation: slideIn 0.3s ease both;
+  }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+  .tac-n { color: var(--muted); font-size: 10px; min-width: 20px; text-align: right; }
+  .tac-dst { color: var(--accent); font-weight: 600; }
+  .tac-eq  { color: var(--muted); }
+  .tac-op  { color: var(--warn); font-size: 14px; }
+  .tac-arg { color: var(--text); }
+  .tac-arg.is-num { color: var(--accent2); }
+
+  /* Pipeline */
+  .pipeline {
+    padding: 20px;
+    display: flex; flex-direction: column; gap: 0;
+    height: 100%; overflow-y: auto;
+  }
+  .step {
+    display: flex; gap: 16px;
+    padding-bottom: 24px;
+    position: relative;
+  }
+  .step:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 15px; top: 32px; bottom: 0;
+    width: 2px;
+    background: var(--border2);
+  }
+  .step-icon {
+    width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    border: 2px solid var(--border2);
+    background: var(--card);
+    color: var(--muted);
+    position: relative; z-index: 1;
+    transition: all 0.3s;
+  }
+  .step.done .step-icon {
+    border-color: var(--success);
+    background: rgba(34,197,94,0.1);
+    color: var(--success);
+  }
+  .step.active .step-icon {
+    border-color: var(--accent);
+    background: rgba(108,99,255,0.15);
+    color: var(--accent);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(108,99,255,0.4); } 50% { box-shadow: 0 0 0 8px rgba(108,99,255,0); } }
+  .step-content h3 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .step-content p  { font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .step-content .detail { margin-top: 8px; }
+  .step-content code {
+    font-family: var(--mono); font-size: 11px;
+    background: var(--card); border: 1px solid var(--border2);
+    border-radius: 4px; padding: 2px 6px; color: var(--accent2);
+  }
+
+  /* Empty state */
+  .empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; gap: 8px; color: var(--muted);
+    font-size: 12px; text-align: center; padding: 20px;
+  }
+  .empty svg { opacity: 0.3; margin-bottom: 4px; }
+
+  /* Error */
+  .err-msg {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--danger); padding: 12px;
+    background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
+    border-radius: var(--radius); margin: 8px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">CS</div>
+  <div>
+    <h1>Compiler Studio</h1>
+    <p>Symbol Table · Lexical Analyzer · Three-Address Code Generator</p>
+  </div>
+  <div class="badge">Flex + Bison Simulator</div>
+</header>
+
+<div class="layout">
+
+  <!-- LEFT: Input Panel -->
+  <div class="input-panel">
+    <div class="panel-header">
+      <div class="ph-dot" style="background:#f59e0b"></div>
+      <div class="ph-dot" style="background:#22c55e"></div>
+      <div class="ph-dot" style="background:#6c63ff"></div>
+      <h2 style="margin-left:6px">Source Input</h2>
+    </div>
+
+    <div class="editor-wrap">
+      <div class="editor-label">// enter expression</div>
+      <textarea id="source-input" spellcheck="false" placeholder="p = i + r * 60">p = i + r * 60</textarea>
+    </div>
+
+    <div style="padding: 0 20px 10px;">
+      <div class="editor-label">Quick Examples</div>
+    </div>
+    <div class="examples">
+      <button class="ex-btn" onclick="setExample('p = i + r * 60')">p = i + r * 60</button>
+      <button class="ex-btn" onclick="setExample('z = (a + b) * (c - d)')">z = (a+b)*(c-d)</button>
+      <button class="ex-btn" onclick="setExample('result = x * x + y * y')">result = x²+y²</button>
+      <button class="ex-btn" onclick="setExample('val = a / b + c * 2.5')">val = a/b+c*2.5</button>
+      <button class="ex-btn" onclick="setExample('ans = (m + n) / 2')">ans = avg</button>
+    </div>
+
+    <button class="run-btn" onclick="compile()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="4,2 14,8 4,14" fill="white" stroke="none"/>
+      </svg>
+      Run Compiler Phases
+    </button>
+  </div>
+
+  <!-- RIGHT TOP: Tokens + Symbols -->
+  <div class="output-top">
+
+    <!-- Tokens -->
+    <div class="out-panel">
+      <div class="panel-header">
+        <div class="ph-dot" style="background:#f59e0b"></div>
+        <h2>Lexical Tokens</h2>
+      </div>
+      <div class="out-body" id="tokens-out">
+        <div class="empty">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>
+          Run to see tokens
+        </div>
+      </div>
+    </div>
+
+    <!-- Symbol Table -->
+    <div class="out-panel">
+      <div class="panel-header">
+        <div class="ph-dot" style="background:#6c63ff"></div>
+        <h2>Symbol Table</h2>
+      </div>
+      <div class="out-body" id="symtab-out">
+        <div class="empty">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+          Run to see symbols
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT BOTTOM: TAC + Pipeline -->
+  <div class="output-bottom">
+    <div style="display:grid; grid-template-columns:1fr 1fr; height:100%; border-top: 1px solid var(--border);">
+
+      <!-- TAC -->
+      <div class="out-panel">
+        <div class="panel-header">
+          <div class="ph-dot" style="background:#00d4aa"></div>
+          <h2>Three-Address Code</h2>
+        </div>
+        <div class="out-body" id="tac-out">
+          <div class="empty">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            Run to see TAC
+          </div>
+        </div>
+      </div>
+
+      <!-- Compiler Pipeline -->
+      <div class="out-panel" style="border-right:none;">
+        <div class="panel-header">
+          <div class="ph-dot" style="background:#f472b6"></div>
+          <h2>Compiler Pipeline</h2>
+        </div>
+        <div class="pipeline" id="pipeline-out">
+          <div class="step" id="s1">
+            <div class="step-icon">1</div>
+            <div class="step-content">
+              <h3>Source Input</h3>
+              <p>Raw expression entered by the user. Passed to the Flex lexer as a character stream.</p>
+            </div>
+          </div>
+          <div class="step" id="s2">
+            <div class="step-icon">2</div>
+            <div class="step-content">
+              <h3>Lexical Analysis (Flex)</h3>
+              <p>Flex scans the input, matches regex patterns, and produces a stream of typed tokens.</p>
+            </div>
+          </div>
+          <div class="step" id="s3">
+            <div class="step-icon">3</div>
+            <div class="step-content">
+              <h3>Symbol Table</h3>
+              <p>Every identifier is registered. Each gets a unique ID (<code>id1</code>, <code>id2</code>…) and a type.</p>
+            </div>
+          </div>
+          <div class="step" id="s4">
+            <div class="step-icon">4</div>
+            <div class="step-content">
+              <h3>Syntax Analysis (Bison)</h3>
+              <p>Recursive-descent / LALR(1) parser checks grammar rules. Builds the parse tree.</p>
+            </div>
+          </div>
+          <div class="step" id="s5">
+            <div class="step-icon">5</div>
+            <div class="step-content">
+              <h3>TAC Generation</h3>
+              <p>Semantic actions in Bison rules emit three-address instructions with temporaries <code>t1</code>, <code>t2</code>…</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ================================================================== */
+/* Mini Compiler Engine (JS port of the C code + Bison grammar)       */
+/* ================================================================== */
+
+function setExample(expr) {
+  document.getElementById('source-input').value = expr;
+}
+
+/* --- Tokenizer --- */
+const TK = {
+  ID:'ID', NUM:'NUM', PLUS:'PLUS', MINUS:'MINUS',
+  MUL:'MUL', DIV:'DIV', LPAREN:'LPAREN', RPAREN:'RPAREN',
+  ASSIGN:'ASSIGN', EOF:'EOF', INVALID:'INVALID'
+};
+
+function tokenize(src) {
+  const tokens = [];
+  let i = 0;
+  while (i < src.length) {
+    if (/\s/.test(src[i])) { i++; continue; }
+    if (/[0-9]/.test(src[i])) {
+      let v = '';
+      while (i < src.length && /[0-9.]/.test(src[i])) v += src[i++];
+      tokens.push({ type: TK.NUM, val: v });
+    } else if (/[a-zA-Z_]/.test(src[i])) {
+      let v = '';
+      while (i < src.length && /[a-zA-Z0-9_]/.test(src[i])) v += src[i++];
+      tokens.push({ type: TK.ID, val: v });
+    } else {
+      const c = src[i++];
+      const map = {'+':TK.PLUS,'-':TK.MINUS,'*':TK.MUL,'/':TK.DIV,
+                   '(':TK.LPAREN,')':TK.RPAREN,'=':TK.ASSIGN};
+      tokens.push({ type: map[c] || TK.INVALID, val: c });
+    }
+  }
+  tokens.push({ type: TK.EOF, val: 'EOF' });
+  return tokens;
+}
+
+/* --- Symbol Table --- */
+function buildSymTab(tokens) {
+  const table = [];
+  const map = {};
+  let cnt = 1;
+  for (const t of tokens) {
+    if (t.type === TK.ID && !map[t.val]) {
+      map[t.val] = { name: t.val, id: 'id' + cnt++, type: 'int' };
+      table.push(map[t.val]);
+    }
+  }
+  return { table, map };
+}
+
+/* --- Parser + TAC emitter --- */
+function parse(tokens, symMap) {
+  let pos = 0;
+  let tmpCnt = 0;
+  const tac = [];
+  let error = null;
+
+  const cur = () => tokens[pos];
+  const eat = (type) => {
+    if (cur().type !== type) throw new Error(`Expected ${type}, got ${cur().val}`);
+    return tokens[pos++];
+  };
+  const mkTmp = () => 't' + (++tmpCnt);
+
+  function factor() {
+    if (cur().type === TK.NUM) {
+      const v = cur().val; pos++;
+      return v;
+    }
+    if (cur().type === TK.ID) {
+      const entry = symMap[cur().val];
+      pos++;
+      return entry ? entry.id : cur().val;
+    }
+    if (cur().type === TK.LPAREN) {
+      pos++;
+      const v = expr();
+      eat(TK.RPAREN);
+      return v;
+    }
+    throw new Error('Invalid factor: ' + cur().val);
+  }
+
+  function term() {
+    let l = factor();
+    while (cur().type === TK.MUL || cur().type === TK.DIV) {
+      const op = cur().val; pos++;
+      const r = factor();
+      const t = mkTmp();
+      tac.push({ dst: t, a: l, op, b: r });
+      l = t;
+    }
+    return l;
+  }
+
+  function expr() {
+    let l = term();
+    while (cur().type === TK.PLUS || cur().type === TK.MINUS) {
+      const op = cur().val; pos++;
+      const r = term();
+      const t = mkTmp();
+      tac.push({ dst: t, a: l, op, b: r });
+      l = t;
+    }
+    return l;
+  }
+
+  function stmt() {
+    const idTok = eat(TK.ID);
+    const entry = symMap[idTok.val];
+    eat(TK.ASSIGN);
+    const r = expr();
+    tac.push({ dst: entry ? entry.id : idTok.val, a: r, op: null, b: null });
+  }
+
+  try { stmt(); }
+  catch (e) { error = e.message; }
+
+  return { tac, error };
+}
+
+/* ================================================================== */
+/* Render functions                                                     */
+/* ================================================================== */
+
+function renderTokens(tokens, symMap) {
+  const el = document.getElementById('tokens-out');
+  if (!tokens.length) { el.innerHTML = '<div class="empty">No tokens</div>'; return; }
+  el.innerHTML = '';
+  for (const t of tokens) {
+    if (t.type === TK.EOF) continue;
+    let cls = 't-op', label = 'OP', display = t.val;
+    if (t.type === TK.ID)     { cls = 't-id';     label = 'ID';  display = symMap[t.val]?.id || t.val; }
+    if (t.type === TK.NUM)    { cls = 't-num';    label = 'NUM'; }
+    if (t.type === TK.ASSIGN) { cls = 't-assign'; label = 'ASSIGN'; }
+    if (t.type === TK.LPAREN || t.type === TK.RPAREN) { cls = 't-paren'; label = 'GRP'; }
+    const span = document.createElement('span');
+    span.className = `tok ${cls}`;
+    span.innerHTML = `<span class="tok-type">${label}</span><span class="tok-val">${display}</span>`;
+    el.appendChild(span);
+  }
+}
+
+function renderSymTab(table) {
+  const el = document.getElementById('symtab-out');
+  if (!table.length) { el.innerHTML = '<div class="empty">No identifiers found</div>'; return; }
+  let html = '<table class="sym-table"><thead><tr><th>#</th><th>Name</th><th>ID</th><th>Type</th></tr></thead><tbody>';
+  table.forEach((s, i) => {
+    html += `<tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td class="sym-name">${s.name}</td>
+      <td class="sym-id">${s.id}</td>
+      <td><span class="sym-type">${s.type}</span></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function isNum(v) { return /^[0-9.]+$/.test(v); }
+
+function renderTAC(tac, error) {
+  const el = document.getElementById('tac-out');
+  if (error) {
+    el.innerHTML = `<div class="err-msg">Parse Error: ${error}</div>`;
+    return;
+  }
+  if (!tac.length) { el.innerHTML = '<div class="empty">No TAC generated</div>'; return; }
+  el.innerHTML = '';
+  tac.forEach((instr, i) => {
+    const div = document.createElement('div');
+    div.className = 'tac-line';
+    div.style.animationDelay = (i * 0.08) + 's';
+
+    const aC = isNum(instr.a) ? 'is-num' : '';
+    const bC = instr.b && isNum(instr.b) ? 'is-num' : '';
+
+    let rhs = '';
+    if (instr.op)
+      rhs = `<span class="tac-arg ${aC}">${instr.a}</span>
+             <span class="tac-op">${instr.op}</span>
+             <span class="tac-arg ${bC}">${instr.b}</span>`;
+    else
+      rhs = `<span class="tac-arg ${aC}">${instr.a}</span>`;
+
+    div.innerHTML = `<span class="tac-n">${i+1}</span>
+      <span class="tac-dst">${instr.dst}</span>
+      <span class="tac-eq">=</span>
+      ${rhs}`;
+    el.appendChild(div);
+  });
+}
+
+function animatePipeline(hasError) {
+  const steps = ['s1','s2','s3','s4','s5'];
+  steps.forEach(id => document.getElementById(id).className = 'step');
+  let i = 0;
+  const delay = 300;
+  const run = () => {
+    if (i >= steps.length) return;
+    const el = document.getElementById(steps[i]);
+    el.classList.add(i === steps.length - 1 && hasError ? 'active' : 'done');
+    i++;
+    if (!hasError || i < steps.length) setTimeout(run, delay);
+    else el.classList.replace('done', 'active');
+  };
+  setTimeout(run, 100);
+}
+
+/* ================================================================== */
+/* Main compile function                                               */
+/* ================================================================== */
+
+function compile() {
+  const src = document.getElementById('source-input').value.trim();
+  if (!src) return;
+
+  const tokens = tokenize(src);
+  const { table, map } = buildSymTab(tokens);
+  const { tac, error } = parse(tokens, map);
+
+  renderTokens(tokens, map);
+  renderSymTab(table);
+  renderTAC(tac, error);
+  animatePipeline(!!error);
+}
+
+/* Run on load */
+compile();
+</script>
+</body>
+</html>
