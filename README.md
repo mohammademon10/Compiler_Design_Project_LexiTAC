@@ -5,6 +5,10 @@
 
   <br/>
 
+  # LexiTAC - Symbol Table, Lexical Analysis & TAC Generation
+
+  <br/>
+
   <!-- Badges -->
   ![Language](https://img.shields.io/badge/Language-C-00599C?style=for-the-badge&logo=c&logoColor=white)
   ![Flex](https://img.shields.io/badge/Tool-Flex-f59e0b?style=for-the-badge&logo=gnu&logoColor=white)
