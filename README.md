@@ -51,6 +51,102 @@ A **Symbol Table** is maintained throughout, assigning each identifier a unique 
 
 ---
 
+# 🧠 Why This Project Matters
+
+Most developers use compilers — very few understand how they work internally.
+
+**LexiTAC bridges that gap.**
+
+This project simulates the **core pipeline used in real-world compilers** like:
+
+* GCC
+* LLVM
+
+It demonstrates how high-level expressions are transformed into machine-friendly intermediate code using:
+
+* Deterministic Finite Automata (Lexical Analysis)
+* LALR(1) Parsing (Syntax Analysis)
+* Intermediate Representation (Three-Address Code)
+
+---
+
+# ⚡ What Makes LexiTAC Special
+
+✔ Built using **industry-grade tools (Flex + Bison)**
+✔ Implements **real compiler pipeline architecture**
+✔ Generates **Three-Address Code (TAC)**
+✔ Includes **interactive web simulator**
+✔ Clean **modular design** (lexer / parser / codegen separation)
+✔ Works in both **CLI + Browser environments**
+
+---
+
+# 🏗️ Architecture
+
+## 🔹 Compiler Pipeline
+
+```mermaid id="lxt1"
+graph LR
+    A[Source Code] --> B[Lexical Analysis]
+    B --> C[Token Stream]
+    B --> D[Symbol Table]
+    C --> E[Syntax Parser]
+    D --> E
+    E --> F[Intermediate Code]
+    F --> G[TAC Output]
+```
+
+---
+
+## 🔹 Internal Workflow
+
+```mermaid id="lxt2"
+graph TD
+    S[Input Expression] --> L[Flex Lexer]
+    L --> T[Tokenization]
+    T --> ST[Symbol Table Creation]
+    ST --> P[Bison Parser]
+    P --> G[Grammar Validation]
+    G --> IR[TAC Generation]
+```
+
+---
+
+# ⚙️ Core Components
+
+### 🔤 Lexical Analyzer (Flex)
+
+* Converts source code into tokens
+* Uses regex-based DFA
+* Identifies:
+
+  * Identifiers
+  * Numbers
+  * Operators
+
+---
+
+### 🌳 Syntax Parser (Bison)
+
+* Implements **LALR(1) parsing**
+* Handles:
+
+  * Operator precedence
+  * Associativity
+  * Grammar validation
+
+---
+
+### 🗂️ Symbol Table
+
+* Stores identifiers with:
+
+  * Unique IDs (`id1`, `id2`)
+  * Type information
+* Ensures consistency across compilation
+
+---
+
 ## ✨ Features
 
 - 🔤 **Flex-based Lexer** — Regex-powered tokenization for identifiers, numbers, operators, and delimiters
