@@ -160,7 +160,7 @@ factor
 
 void yyerror(const char *msg) {
     fprintf(stderr, "\nParse Error (line %d): %s\n", yylineno, msg);
-}
+} 
 
 int main(void) {
     char buffer[512];

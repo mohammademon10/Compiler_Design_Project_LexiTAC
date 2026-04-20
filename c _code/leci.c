@@ -33,13 +33,35 @@ typedef struct {
     char id[8];
 } Symbol;
 
+/* --- Function Prototypes --- */
+Token next_token();
+void generate_tac(char *target, char *arg1, char *op, char *arg2);
+char* parse_expr();
+char* parse_term();
+char* parse_factor();
+void advance();
+
 Symbol symtab[256];
 int symcount = 0;
 char *src;
 int src_pos = 0;
 int tmpcnt = 0;
 
+char temp_names[100][10];
+int temp_index = 0;
+char constant_buffer[64];
+Token current_token;
+
+void advance() {
+    current_token = next_token();
+}
+
+char* parse_expr();
+char* parse_term();
+char* parse_factor();
+
 /* --- Utility Functions --- */
+// Adds a symbol to the symbol table if it doesn't exist, returns index
 int sym_add(const char *name) {
     for (int i = 0; i < symcount; i++) {
         if (strcmp(symtab[i].name, name) == 0) return i;
@@ -48,7 +70,7 @@ int sym_add(const char *name) {
     snprintf(symtab[symcount].id, 8, "id%d", symcount + 1);
     return symcount++;
 }
-
+ // Lexical analyzer: returns the next token from the source code
 Token next_token() {
     Token t; t.type = T_INVALID;
     memset(t.lexeme, 0, 64);
@@ -75,7 +97,62 @@ Token next_token() {
     return t;
 }
 
+/* --- Parsing Functions --- */
+// Parses factors: identifiers, numbers, or parenthesized expressions
+char* parse_factor() {
+    if (current_token.type == T_IDENTIFIER) {
+        int idx = sym_add(current_token.lexeme);
+        advance();
+        return symtab[idx].id;
+    } else if (current_token.type == T_NUMBER) {
+        strcpy(constant_buffer, current_token.lexeme);
+        advance();
+        return constant_buffer;
+    } else if (current_token.type == T_LPAREN) {
+        advance();
+        char* res = parse_expr();
+        if (current_token.type != T_RPAREN) {
+            printf(RED "Error: Missing ')'\n" RESET);
+            exit(1);
+        }
+        advance();
+        return res;
+    } else {
+        printf(RED "Error: Unexpected token in factor\n" RESET);
+        exit(1);
+    }
+}
+
+// Parses terms: factors combined with '*' or '/'
+char* parse_term() {
+    char* result = parse_factor();
+    while (current_token.type == T_MUL || current_token.type == T_DIV) {
+        char* op = (current_token.type == T_MUL) ? "*" : "/";
+        advance();
+        char* right = parse_factor();
+        sprintf(temp_names[temp_index], "t%d", ++tmpcnt);
+        generate_tac(temp_names[temp_index], result, op, right);
+        result = temp_names[temp_index++];
+    }
+    return result;
+}
+
+// Parses expressions: terms combined with '+' or '-' 
+char* parse_expr() {
+    char* result = parse_term();
+    while (current_token.type == T_PLUS || current_token.type == T_MINUS) {
+        char* op = (current_token.type == T_PLUS) ? "+" : "-";
+        advance();
+        char* right = parse_term();
+        sprintf(temp_names[temp_index], "t%d", ++tmpcnt);
+        generate_tac(temp_names[temp_index], result, op, right);
+        result = temp_names[temp_index++];
+    }
+    return result;
+}
+
 /* --- Improved UI Printing --- */
+// Prints a stylized banner at the start of the program
 void print_banner() {
     printf(CYN BOLD "┌──────────────────────────────────────────────────────────┐\n");
     printf("│  SYMBOL TABLE, LEXICAL ANALYSIS & TAC GENERATOR          │\n");
@@ -124,10 +201,27 @@ int main() {
     print_symbol_table();
 
     printf(YEL "\n[2] THREE ADDRESS CODE (TAC)\n" RESET);
-    // Hardcoded logic for the demo case: v = a + b * 5
-    generate_tac("t1", "id3", "*", "5");
-    generate_tac("t2", "id2", "+", "t1");
-    generate_tac("id1", "t2", NULL, NULL);
+    // Parse and generate TAC
+    src_pos = 0; // reset position
+    advance();
+    if (current_token.type != T_IDENTIFIER) {
+        printf(RED "Error: Expected identifier for assignment\n" RESET);
+        return 1;
+    }
+    int idx = sym_add(current_token.lexeme);
+    char* target = symtab[idx].id;
+    advance();
+    if (current_token.type != T_ASSIGN) {
+        printf(RED "Error: Expected '='\n" RESET);
+        return 1;
+    }
+    advance();
+    char* expr_result = parse_expr();
+    if (current_token.type != T_END) {
+        printf(RED "Error: Unexpected tokens after expression\n" RESET);
+        return 1;
+    }
+    generate_tac(target, expr_result, NULL, NULL);
 
     printf(CYN "\n[*] Process Complete.\n" RESET);
     return 0;
